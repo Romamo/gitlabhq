@@ -1,8 +1,8 @@
 # Important notes
 
-This installation guide was created for and tested on **Debian/Ubuntu** operating systems. Please read [`doc/install/requirements.md`](./requirements.md) for hardware and operating system requirements.
+This installation guide was created for and tested on **FreeBSD 8.3 and 9.1** operating systems. Please read [`doc/install/requirements.md`](./requirements.md) for hardware and operating system requirements.
 
-This is the official installation guide to set up a production server. To set up a **development installation** or for many other installation options please consult [the installation section in the readme](https://github.com/gitlabhq/gitlabhq#installation).
+This is **NOT** the official installation guide to set up a production server since upstream doesnt support **FreeBSD**. To set up a **development installation** or for many other installation options please consult [the installation section in the readme](https://github.com/gitlabhq/gitlabhq#installation).
 
 The following steps have been known to work. Please **use caution when you deviate** from this guide. Make sure you don't violate any assumptions GitLab makes about its environment.
 
@@ -24,98 +24,96 @@ The GitLab installation consists of setting up the following components:
 
 
 # 1. Packages / Dependencies
+Change to `root` using `su`
 
-`sudo` is not installed on Debian by default. Make sure your system is
-up-to-date and install it.
+We will use `portmaster` to install ports, and by default `portmaster` is not installed on FreeBSD. Make sure your system is up-to-date and install it.
 
-    # run as root
-    apt-get update
-    apt-get upgrade
-    apt-get install sudo
+	cd /usr/ports/ports-mgmt/portmaster && make install clean
 
 **Note:**
 Vim is an editor that is used here whenever there are files that need to be
 edited by hand. But, you can use any editor you like instead.
 
-    # Install vim
-    sudo apt-get install -y vim
+    # Install vim as root
+    portmaster editors/vim
 
 Install the required packages:
 
-    sudo apt-get install -y build-essential zlib1g-dev libyaml-dev libssl-dev libgdbm-dev libreadline-dev libncurses5-dev libffi-dev curl git-core openssh-server redis-server checkinstall libxml2-dev libxslt-dev libcurl4-openssl-dev libicu-dev
+    **!** Need Testing
+    zlib1g-dev libyaml-dev libssl-dev libgdbm-dev libreadline-dev libncurses5-dev libffi-dev postfix checkinstall libxml2-dev libxslt-dev libcurl4-openssl-dev libicu-dev
+	
+	portmaster devel/git databases/redis 
+	
+Setup redis server:
 
+	cp /usr/local/etc/redis.conf.sample /usr/local/etc/redis.conf
+	echo "redis_enable="YES"" >> /etc/rc.conf
+	service redis start
+	
 Make sure you have the right version of Python installed.
 
     # Install Python
-    sudo apt-get install python
+    portmaster lang/python
 
     # Make sure that Python is 2.5+ (3.x is not supported at the moment)
     python --version
 
     # If it's Python 3 you might need to install Python 2 separately
-    sudo apt-get install python2.7
+    portmaster lang/python27
 
-    # Make sure you can access Python via python2
-    python2 --version
 
-    # If you get a "command not found" error create a link to the python binary
-    sudo ln -s /usr/bin/python /usr/bin/python2
-
-**Note:** In order to receive mail notifications, make sure to install a
-mail server. By default, Debian is shipped with exim4 whereas Ubuntu
-does not ship with one. The recommended mail server is postfix and you can install it with:
-
-	sudo apt-get install postfix 
 
 # 2. Ruby
+Set Ruby 1.9 the default version if not already:
+
+	echo RUBY_DEFAULT_VER=1.9 >> /etc/make.conf
 
 Download and compile it:
+	
+	portmaster lang/ruby19
 
-    mkdir /tmp/ruby && cd /tmp/ruby
-    curl --progress http://ftp.ruby-lang.org/pub/ruby/1.9/ruby-1.9.3-p392.tar.gz | tar xz
-    cd ruby-1.9.3-p392
-    ./configure
-    make
-    sudo make install
+Install rubygems:
+
+	portmaster devel/ruby-gems
 
 Install the Bundler Gem:
-
-    sudo gem install bundler
+	
+    gem install bundler
 
 
 # 3. System Users
 
-Create a `git` user for Gitlab:
+Create a `git` user and group for Gitlab:
 
-    sudo adduser --disabled-login --gecos 'GitLab' git
+    pw addgroup git
+    pw adduser git -g git -m -d /home/git -c "GitLab"
 
 
 # 4. GitLab shell
 
 GitLab Shell is a ssh access and repository management software developed specially for GitLab.
 
-    # Login as git
-    sudo su git
-
     # Go to home directory
     cd /home/git
 
     # Clone gitlab shell
-    git clone https://github.com/gitlabhq/gitlab-shell.git
+    su -m git -c "git clone https://github.com/gitlab-freebsd/gitlab-shell.git"
 
     cd gitlab-shell
 
     # switch to right version
-    git checkout v1.3.0
 
-    cp config.yml.example config.yml
+    su -m git -c "cp config.yml.example config.yml"
 
     # Edit config and replace gitlab_url
     # with something like 'http://domain.com/'
-    vim config.yml
+    
+    
+    # edit and make sure that is pointing to /usr/local/bin/redis-cli
+    su -m git -c "vim config.yml"
 
     # Do setup
-    ./bin/install
+    su -m git -c ./bin/install
 
 
 # 5. Database
@@ -131,46 +129,36 @@ To setup the MySQL/PostgreSQL database and dependencies please see [`doc/install
 ## Clone the Source
 
     # Clone GitLab repository
-    sudo -u git -H git clone https://github.com/gitlabhq/gitlabhq.git gitlab
+    su -m git -c "git clone https://github.com/gitlab-freebsd/gitlabhq.git gitlab"
 
-    # Go to gitlab dir
-    cd /home/git/gitlab
-
-    # Checkout to stable release
-    sudo -u git -H git checkout 5-1-stable
-
-**Note:**
-You can change `5-1-stable` to `master` if you want the *bleeding edge* version, but
-do so with caution!
 
 ## Configure it
 
     cd /home/git/gitlab
 
     # Copy the example GitLab config
-    sudo -u git -H cp config/gitlab.yml.example config/gitlab.yml
+    su -m git -c "cp config/gitlab.yml.example config/gitlab.yml"
 
     # Make sure to change "localhost" to the fully-qualified domain name of your
     # host serving GitLab where necessary
-    sudo -u git -H vim config/gitlab.yml
+    # git is on /usr/local/bin/git
+    su -m git -c "vim config/gitlab.yml"
 
     # Make sure GitLab can write to the log/ and tmp/ directories
-    sudo chown -R git log/
-    sudo chown -R git tmp/
-    sudo chmod -R u+rwX  log/
-    sudo chmod -R u+rwX  tmp/
+    chown -R git log/
+    chown -R git tmp/
+    chmod -R u+rwX  log/
+    chmod -R u+rwX  tmp/
 
     # Create directory for satellites
-    sudo -u git -H mkdir /home/git/gitlab-satellites
+    su -m git -c "mkdir /home/git/gitlab-satellites"
 
-    # Create directories for sockets/pids and make sure GitLab can write to them
-    sudo -u git -H mkdir tmp/pids/
-    sudo -u git -H mkdir tmp/sockets/
-    sudo chmod -R u+rwX  tmp/pids/
-    sudo chmod -R u+rwX  tmp/sockets/
+    # Create directory for pids and make sure GitLab can write to it
+    su -m git -c "mkdir tmp/pids/"
+    chmod -R u+rwX  tmp/pids/
 
     # Copy the example Puma config
-    sudo -u git -H cp config/puma.rb.example config/puma.rb
+    su -m git -c "cp config/puma.rb.example config/puma.rb"
 
 **Important Note:**
 Make sure to edit both files to match your setup.
@@ -178,10 +166,10 @@ Make sure to edit both files to match your setup.
 ## Configure GitLab DB settings
 
     # Mysql
-    sudo -u git cp config/database.yml.mysql config/database.yml
+    su -m git -c "cp config/database.yml.mysql config/database.yml"
 
     # PostgreSQL
-    sudo -u git cp config/database.yml.postgresql config/database.yml
+    su -m git -c "cp config/database.yml.postgresql config/database.yml"
 
 Make sure to update username/password in config/database.yml.
 
@@ -189,50 +177,51 @@ Make sure to update username/password in config/database.yml.
 
     cd /home/git/gitlab
 
-    sudo gem install charlock_holmes --version '0.6.9'
+    gem install charlock_holmes --version '0.6.9'
 
     # For MySQL (note, the option says "without")
-    sudo -u git -H bundle install --deployment --without development test postgres
+    su -m git -c "bundle install --deployment --without development test postgres"
 
     # Or for PostgreSQL
-    sudo -u git -H bundle install --deployment --without development test mysql
+    su -m git -c "bundle install --deployment --without development test mysql"
 
 
 ## Initialise Database and Activate Advanced Features
 
-    sudo -u git -H bundle exec rake gitlab:setup RAILS_ENV=production
+    su -m git -c "bundle exec rake gitlab:setup RAILS_ENV=production"
 
 
 ## Install Init Script
 
 Download the init script (will be /etc/init.d/gitlab):
 
-    sudo curl --output /etc/init.d/gitlab https://raw.github.com/gitlabhq/gitlabhq/master/lib/support/init.d/gitlab
-    sudo chmod +x /etc/init.d/gitlab
+    **!**
+    curl --output /etc/rc.d/gitlab https://raw.github.com/gitlab-freebsd/gitlabhq/master/lib/support/rc.d/gitlab
+    chmod +x /etc/rc.d/gitlab
 
 Make GitLab start on boot:
 
-    sudo update-rc.d gitlab defaults 21
+    echo "gitlab_enable="YES"" >> /etc/rc.conf
 
 
 ## Check Application Status
 
 Check if GitLab and its environment are configured correctly:
 
-    sudo -u git -H bundle exec rake gitlab:env:info RAILS_ENV=production
+    su -m git -c "bundle exec rake gitlab:env:info RAILS_ENV=production"
 
 To make sure you didn't miss anything run a more thorough check with:
 
-    sudo -u git -H bundle exec rake gitlab:check RAILS_ENV=production
+    su -m git -c "bundle exec rake gitlab:check RAILS_ENV=production"
 
 If all items are green, then congratulations on successfully installing GitLab!
 However there are still a few steps left.
 
 ## Start Your GitLab Instance
 
-    sudo service gitlab start
+    service gitlab start
     # or
-    sudo /etc/init.d/gitlab restart
+    /etc/rc.d/gitlab restart
 
 
 # 7. Nginx
@@ -242,25 +231,26 @@ If you can't or don't want to use Nginx as your web server, have a look at the
 [`Advanced Setup Tips`](./installation.md#advanced-setup-tips) section.
 
 ## Installation
-    sudo apt-get install nginx
-
+    portmaster www/nginx
+	echo "nginx_enable="YES"" >> /etc/rc.conf
 ## Site Configuration
 
 Download an example site config:
-
-    sudo curl --output /etc/nginx/sites-available/gitlab https://raw.github.com/gitlabhq/gitlabhq/master/lib/support/nginx/gitlab
-    sudo ln -s /etc/nginx/sites-available/gitlab /etc/nginx/sites-enabled/gitlab
+	
+	
+    curl --output /etc/nginx/sites-available/gitlab.conf https://raw.github.com/gitlab-freebsd/gitlabhq/freebsd/gitlab_nginx.conf
+    ln -s /etc/nginx/sites-available/gitlab.conf /etc/nginx/sites-enabled/gitlab.conf
 
 Make sure to edit the config file to match your setup:
 
-    # Change **YOUR_SERVER_IP** and **YOUR_SERVER_FQDN**
-    # to the IP address and fully-qualified domain name
+    # Change and **server_name** fully-qualified domain name
     # of your host serving GitLab
-    sudo vim /etc/nginx/sites-available/gitlab
+    # also change the path to the SSL certificate and key
+    vim /etc/nginx/sites-available/gitlab
 
 ## Restart
 
-    sudo service nginx restart
+    service nginx restart
 
 
 # Done!
@@ -317,13 +307,8 @@ GitLab uses [Omniauth](http://www.omniauth.org/) for authentication and already 
 These steps are fairly general and you will need to figure out the exact details from the Omniauth provider's documentation.
 
 * Add `gem "omniauth-your-auth-provider"` to the [Gemfile](https://github.com/gitlabhq/gitlabhq/blob/master/Gemfile#L18)
-* Run `sudo -u git -H bundle install` to install the new gem(s)
+* Run `su -m git -c "bundle install"` to install the new gem(s)
 * Add provider specific configuration options to your `config/gitlab.yml` (you can use the [auth providers section of the example config](https://github.com/gitlabhq/gitlabhq/blob/master/config/gitlab.yml.example#L53) as a reference)
 * Add icons for the new provider into the [vendor/assets/images/authbuttons](https://github.com/gitlabhq/gitlabhq/tree/master/vendor/assets/images/authbuttons) directory (you can find some more popular ones over at https://github.com/intridea/authbuttons)
 * Restart GitLab
 
-### Examples
-
-If you have successfully set up a provider that is not shipped with GitLab itself, please let us know.
-You can help others by reporting successful configurations and probably share a few insights or provide warnings for common errors or pitfalls by sharing your experience [in the public Wiki](https://github.com/gitlabhq/gitlab-public-wiki/wiki/Working-Custom-Omniauth-Provider-Configurations).
-While we can't officially support every possible auth mechanism out there, we'd like to at least help those with special needs.
