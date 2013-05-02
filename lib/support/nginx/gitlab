@@ -1,6 +1,6 @@
 # GITLAB
-# Maintainer: @randx
-# App Version: 5.0
+# Maintainer: @gitlab-freebsd
+# App Version: 5.1
 
 upstream gitlab {
   server unix:/home/git/gitlab/tmp/sockets/gitlab.socket;
@@ -12,8 +12,8 @@ server {
   root /home/git/gitlab/public;
 
   # individual nginx logs for this gitlab vhost
-  access_log  /var/log/nginx/gitlab_access.log;
-  error_log   /var/log/nginx/gitlab_error.log;
+  access_log  /var/log/gitlab_access.log;
+  error_log   /var/log/gitlab_error.log;
 
   location / {
     # serve static files from defined root folder;.
