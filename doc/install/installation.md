@@ -67,13 +67,9 @@ Set Ruby 1.9 the default version if not already:
 
 	echo RUBY_DEFAULT_VER=1.9 >> /etc/make.conf
 
-Install ruby (will be a dependency) and rubygems:
+Install ruby and rubygems:
 	
-	portmaster lang/ruby19
-
-Install rubygems:
-
-	portmaster devel/ruby-gems
+	portmaster lang/ruby19 devel/ruby-gems
 
 Install the Bundler Gem:
 	
@@ -140,7 +136,7 @@ To setup the MySQL/PostgreSQL database and dependencies please see [`doc/install
 
     # Make sure to change "localhost" to the fully-qualified domain name of your
     # host serving GitLab where necessary
-    # git is on /usr/local/bin/git
+    # make sure git path field is /usr/local/bin/git
     su -m git -c "vim config/gitlab.yml"
 
     # Make sure GitLab can write to the log/ and tmp/ directories
