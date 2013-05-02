@@ -6,6 +6,8 @@ This is **NOT** the official installation guide to set up a production server si
 
 The following steps have been known to work. Please **use caution when you deviate** from this guide. Make sure you don't violate any assumptions GitLab makes about its environment.
 
+
+
 If you find a bug/error in this guide please **submit a pull request** following the [`contributing guide`](../../CONTRIBUTING.md).
 
 - - -
@@ -38,11 +40,8 @@ edited by hand. But, you can use any editor you like instead.
     portmaster editors/vim
 
 Install the required packages:
-
-    **!** Need Testing
-    zlib1g-dev libyaml-dev libssl-dev libgdbm-dev libreadline-dev libncurses5-dev libffi-dev postfix checkinstall libxml2-dev libxslt-dev libcurl4-openssl-dev libicu-dev
 	
-	portmaster devel/git databases/redis 
+	portmaster devel/git databases/redis devel/icu textproc/libxml2 mail/postfix textproc/libxslt
 	
 Setup redis server:
 
@@ -68,7 +67,7 @@ Set Ruby 1.9 the default version if not already:
 
 	echo RUBY_DEFAULT_VER=1.9 >> /etc/make.conf
 
-Download and compile it:
+Install ruby (will be a dependency) and rubygems:
 	
 	portmaster lang/ruby19
 
@@ -147,15 +146,17 @@ To setup the MySQL/PostgreSQL database and dependencies please see [`doc/install
     # Make sure GitLab can write to the log/ and tmp/ directories
     chown -R git log/
     chown -R git tmp/
-    chmod -R u+rwX  log/
-    chmod -R u+rwX  tmp/
+    chmod -R u+rwX log/
+    chmod -R u+rwX tmp/
 
     # Create directory for satellites
     su -m git -c "mkdir /home/git/gitlab-satellites"
 
     # Create directory for pids and make sure GitLab can write to it
     su -m git -c "mkdir tmp/pids/"
-    chmod -R u+rwX  tmp/pids/
+    su -m git -c "mkdir tmp/sockets/"
+    chmod -R u+rwX tmp/pids/
+    chmod -R u+rwX tmp/sockets/
 
     # Copy the example Puma config
     su -m git -c "cp config/puma.rb.example config/puma.rb"
@@ -191,13 +192,16 @@ Make sure to update username/password in config/database.yml.
     su -m git -c "bundle exec rake gitlab:setup RAILS_ENV=production"
 
 
-## Install Init Script
+## Install rc Script
 
-Download the init script (will be /etc/init.d/gitlab):
 
-    **!**
-    curl --output /etc/rc.d/gitlab https://raw.github.com/gitlab-freebsd/gitlabhq/master/lib/support/rc.d/gitlab
-    chmod +x /etc/rc.d/gitlab
+ATTENTION!!! THIS IS A NASTY SCRIPT!!
+This is a temporary ugly-dirty-pseudo script "converted" from the original init.d, doesn't start on boot, only works if you do start manually:
+	
+	Download the rc script (will be /usr/local/etc/rc.d/gitlab):
+	
+    curl --output /usr/local/etc/rc.d/gitlab https://raw.github.com/gitlab-freebsd/gitlabhq/freebsd/lib/support/rc.d/gitlab
+    chmod +x /usr/local/etc/rc.d/gitlab
 
 Make GitLab start on boot:
 
@@ -231,21 +235,31 @@ If you can't or don't want to use Nginx as your web server, have a look at the
 [`Advanced Setup Tips`](./installation.md#advanced-setup-tips) section.
 
 ## Installation
+
+Install nginx and enable HTTP_GZIP_STATIC option:
+
     portmaster www/nginx
 	echo "nginx_enable="YES"" >> /etc/rc.conf
+
 ## Site Configuration
+
+Turn your nginx configuration into the sites-available/enabled method:
+
+	curl --output /usr/local/etc/nginx/nginx.conf https://raw.github.com/gitlab-freebsd/gitlabhq/freebsd/lib/support/nginx/nginx.conf
+	mkdir /usr/local/etc/nginx/sites-available
+	mkdir /usr/local/etc/nginx/sites-enabled
 
 Download an example site config:
 	
-	
-    curl --output /etc/nginx/sites-available/gitlab.conf https://raw.github.com/gitlab-freebsd/gitlabhq/freebsd/gitlab_nginx.conf
-    ln -s /etc/nginx/sites-available/gitlab.conf /etc/nginx/sites-enabled/gitlab.conf
+    curl --output /usr/local/etc/nginx/sites-available/gitlab https://raw.github.com/gitlab-freebsd/gitlabhq/freebsd/lib/support/nginx/gitlab
+    
+Enable the gitlab site:
+
+    ln -s /usr/local/etc/nginx/sites-available/gitlab /usr/local/etc/nginx/sites-enabled/gitlab
 
 Make sure to edit the config file to match your setup:
 
-    # Change and **server_name** fully-qualified domain name
-    # of your host serving GitLab
-    # also change the path to the SSL certificate and key
+    # Edit the config file
     vim /etc/nginx/sites-available/gitlab
 
 ## Restart
