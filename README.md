@@ -26,7 +26,7 @@
 
 #### Official production installation
 
-* [Installation guide for a production server](https://github.com/gitlabhq-freebsd/gitlabhq/blob/master/doc/install/installation.md)
+* [Installation guide for a production server](https://github.com/gitlab-freebsd/gitlabhq/blob/freebsd/doc/install/installation.md)
 
 
 #### Official development installation
