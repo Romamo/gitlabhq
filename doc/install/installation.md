@@ -25,7 +25,79 @@ The GitLab installation consists of setting up the following components:
 7. Nginx
 
 
+# 1. Packages / Dependencies3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+This installation guide was created for and tested on **FreeBSD 8.3 and 9.1** operating systems. Please read [`doc/install/requirements.md`](./requirements.md) for hardware and operating system requirements.
+This is **NOT** the official installation guide to set up a production server since upstream doesnt support **FreeBSD**. To set up a **development installation** or for many other installation options please consult [the installation section in the readme](https://github.com/gitlabhq/gitlabhq#installation).
+The following steps have been known to work. Please **use caution when you deviate** from this guide. Make sure you don't violate any assumptions GitLab makes about its environment.
+If you find a bug/error in this guide please **submit a pull request** following the [`contributing guide`](../../CONTRIBUTING.md).
+- - -
+# Overview
+The GitLab installation consists of setting up the following components:
+1. Packages / Dependencies
+2. Ruby
+3. System Users
+4. GitLab shell
+5. Database
+6. GitLab
+7. Nginx
 # 1. Packages / Dependencies
+Change to `root` using `su`
+We will use `portmaster` to install ports, and by default `portmaster` is not installed on FreeBSD. Make sure your system is up-to-date and install it.
+        cd /usr/ports/ports-mgmt/portmaster && make install clean
+**Note:**
+Vim is an editor that is used here whenever there are files that need to be
+edited by hand. But, you can use any editor you like instead.
+    # Install vim as root
+    portmaster editors/vim
+Install the required packages:
+        
+        portmaster devel/git databases/redis devel/icu textproc/libxml2 mail/postfix textproc/libxslt
+        
+Commit summary: Extended description: (optional)
+nerzhul loic.blot@frostsapphirestudios.com
+
 Change to `root` using `su`
 
 We will use `portmaster` to install ports, and by default `portmaster` is not installed on FreeBSD. Make sure your system is up-to-date and install it.
@@ -69,11 +141,7 @@ Set Ruby 1.9 the default version if not already:
 
 Install ruby and rubygems:
 	
-	portmaster lang/ruby19 devel/ruby-gems
-
-Install the Bundler Gem:
-	
-    gem install bundler
+	portmaster lang/ruby19 devel/ruby-gems sysutils/rubygem-bundler
 
 
 # 3. System Users
